@@ -128,7 +128,7 @@ export default function StudiosPage() {
 
         <OfferBand claimed={claimed} />
         <Faq items={FAQ} />
-        <Footer credit="Built in Nairobi by Flex Kipkoech" />
+        <Footer />
       </div>
     </div>
   )

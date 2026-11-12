@@ -287,11 +287,10 @@ export function Faq({ items }) {
   )
 }
 
-export function Footer({ credit }) {
+export function Footer() {
   return (
     <footer className="foot">
       <span className="foot-brand">ospod</span>
-      {credit && <span>{credit}</span>}
       <nav>
         {CONFIG.contactEmail && <a href={`mailto:${CONFIG.contactEmail}`}>Contact</a>}
         <a href="/privacy">Privacy</a>
