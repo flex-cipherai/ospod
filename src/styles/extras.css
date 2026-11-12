@@ -1,0 +1,72 @@
+/* Additions on top of ospod.css: the font, small helpers the React version needs, and the phone layout. */
+
+@font-face {
+  font-family: 'Familjen Grotesk';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/familjen-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+#root { min-height: 100vh; background: #EEF0F3; }
+
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #18213A; }
+.brand-name { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; }
+.fh { font-size: 17px; font-weight: 600; }
+.foot-brand { font-weight: 700; font-size: 20px; letter-spacing: -0.03em; color: #18213A; }
+.mtxt-offer { margin-bottom: 32px; }
+.lede-short { display: none; }
+.field-last { margin-bottom: 28px; }
+.done .sub { margin-bottom: 24px; }
+.done-ask { margin: 0 0 16px; font-size: 16px; }
+.done:focus { outline: none; }
+.err-form { text-align: center; margin: 12px 0 0; }
+.btn:disabled { opacity: .7; cursor: progress; }
+/* Honeypot: off-screen, not display:none, so simple bots still fill it. */
+.hp { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+
+/* Legal pages */
+.legal { max-width: 760px; padding: 0 0 40px; }
+.legal h1 { font-size: 52px; line-height: 1.04; letter-spacing: -0.03em; font-weight: 700; margin: 24px 0 12px; }
+.legal h2 { font-size: 24px; letter-spacing: -0.015em; margin: 40px 0 10px; }
+.legal p, .legal li { font-size: 18px; color: #3A4766; margin: 0 0 14px; }
+.legal ul { padding-left: 22px; margin: 0 0 14px; }
+.legal .updated { font-size: 15px; color: #5A6478; }
+.legal a { text-decoration: underline; }
+
+/* Phone layout (designed at 390px). Anything this narrow gets the tighter type and spacing. */
+@media (max-width: 480px) {
+  .op { font-size: 17px; }
+  .top { padding: 18px 0 20px; }
+  .brand { gap: 8px; }
+  .brand-mark { width: 26px; height: 26px; }
+  .brand-name { font-size: 23px; }
+  .pill { font-size: 13px; padding: 5px 10px; gap: 6px; }
+  .dot { width: 7px; height: 7px; }
+  .hero { gap: 24px; padding: 0 0 40px; }
+  .h1 { font-size: 43px; line-height: 1; margin: 8px 0 18px; }
+  .lede { font-size: 18px; margin: 0 0 26px; }
+  .x-long { display: none; }
+  .lede-long { display: none; }
+  .lede-short { display: inline; }
+  .fh { font-size: 16px; }
+  .meter { gap: 2px; height: 26px; margin: 10px 0 8px; }
+  .seg { border-radius: 1.5px; }
+  .mtxt { font-size: 14px; }
+  .card { border-radius: 18px; padding: 22px; }
+  .card h2 { font-size: 25px; margin: 0 0 6px; }
+  .card p.sub { font-size: 15px; margin: 0 0 20px; }
+  .field { margin: 0 0 18px; }
+  .field-last { margin-bottom: 24px; }
+  .input { padding: 0 14px; }
+  .chip { padding: 0 14px; }
+  .fine { font-size: 13px; }
+  .done .badge { font-size: 13px; padding: 5px 11px; margin: 0 0 14px; }
+  .done h2 { font-size: 29px; line-height: 1.1; margin: 0 0 10px; }
+  .done .sub { font-size: 15px; margin-bottom: 18px; }
+  .done-ask { font-size: 15px; margin-bottom: 14px; }
+  .done .btn { min-height: 54px; font-size: 17px; }
+  .legal h1 { font-size: 36px; }
+}
