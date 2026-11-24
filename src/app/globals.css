@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* Ospod design tokens, taken from the logo kit and the approved waitlist design. */
+@theme {
+  --color-ink: #18213a;
+  --color-ink-hover: #2b3858;
+  --color-navy-800: #24304d;
+  --color-navy-700: #2e3a57;
+  --color-slate: #3a4766;
+  --color-muted: #5a6478;
+  --color-subtle: #8c97ae;
+  --color-mist: #b9c1d3;
+  --color-line: #d5dae3;
+  --color-line-strong: #c3cad6;
+  --color-canvas: #eef0f3;
+  --color-gold: #ffc23d;
+  --color-gold-hover: #ffd064;
+  --color-gold-soft: #fff4d6;
+  --color-gold-ink: #7a5200;
+  --color-periwinkle: #8e9bff;
+  --color-periwinkle-soft: #eceeff;
+  --color-focus: #3f51e0;
+  --color-danger: #b42318;
+  --color-danger-soft: #fef3f2;
+  --color-success: #067647;
+  --color-success-soft: #ecfdf3;
+
+  --radius-card: 20px;
+}
+
+@theme inline {
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  .on-dark :focus-visible {
+    outline-color: var(--color-gold);
+  }
+  ::selection {
+    background: var(--color-gold);
+    color: var(--color-ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

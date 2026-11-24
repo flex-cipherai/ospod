@@ -1,37 +1,6 @@
+# Netlify builds this Next.js app with its Next.js runtime (detected automatically).
 [build]
   command = "npm run build"
-  publish = "dist"
 
-# scripts/prerender-routes.mjs writes dist/studios/index.html and dist/privacy/index.html (so ad
-# platforms read the right title and share image per page). Real files win over this fallback.
-[[redirects]]
-  from = "/studios"
-  to = "/studios/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/privacy"
-  to = "/privacy/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/fonts/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    X-Frame-Options = "DENY"
+[build.environment]
+  NODE_VERSION = "22"

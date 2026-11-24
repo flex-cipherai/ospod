@@ -1,68 +1,102 @@
-# Ospod waitlist
+# Ospod
 
-Landing pages that test demand for Ospod: people join a waitlist, and the first 500 lock in 50% off for life.
+The operations hub for audio and video podcasters: publish everywhere with one click, turn episodes into clips and trailers, and see all your analytics in one place with AI.
 
-| Address | Page | Ads |
+> **Branches.** `main` is still the live waitlist site. The platform is built on the `platform` branch and replaces the waitlist when we launch.
+
+## Stack
+
+| Part | Tool |
+|---|---|
+| Web app | Next.js 16 (App Router, TypeScript), Tailwind CSS 4, on Netlify |
+| Database, sign-in, permissions | Supabase (Postgres, Auth, row level security) |
+| Media storage and delivery (Milestone 2–3) | Cloudflare R2 + a Cloudflare Worker for feeds and download counting |
+| Background jobs (Milestone 2+) | Trigger.dev, running FFmpeg |
+| Transcription (Milestone 2) | Deepgram |
+| AI | Claude |
+| Billing (Milestone 6) | Paystack (card and M-Pesa) |
+
+## Milestones
+
+| # | Milestone | Status |
 |---|---|---|
-| `/` | Podcasters | Instagram |
-| `/studios` | Studios and agencies | LinkedIn |
-| `/privacy` | Privacy notice | |
+| M0 | Foundation: design system, sign-in, dashboard shell, super admin console, marketing site, database | **Done** |
+| M1 | Shows and import from any host | Next |
+| M2 | Upload and processing: transcoding, transcripts, AI titles, show notes, chapters | |
+| M3 | One-click publishing: RSS feeds, YouTube, scheduling, migration | |
+| M4 | Analytics hub and "Ask Ospod" | |
+| M5 | Clips and trailers | |
+| M6 | Billing and plans (Paystack) | |
+| M7 | Beta and launch on ospod.io | |
 
-React (Vite), no router. The designs are recreated from `Ospod Waitlist Landing Pages.html`; `src/styles/ospod.css` is the design's own CSS, `src/styles/extras.css` adds the font, the phone layout and a few helpers.
-
-## How a signup works
-
-1. The page sends the email, four answers, the page it was on, and the ad tags from the URL (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`) to the `ospod-waitlist` Edge Function in the SDFM Supabase project.
-2. The function validates it again, rate limits, and calls a database function that numbers the person (1, 2, 3 ...). Numbers 1 to 500 are founding members.
-3. Everyone with the **Ospod Waitlist** module in the SDFM CRM gets an email, and the signup appears there (Ospod, Ospod Waitlist).
-4. The page's "X of 500 claimed" meter is the real count from the same function. If the count cannot be loaded the page shows "500 founding spots" and no number.
-
-The function, the migration and the CRM page are in the `cac-pipeline` repo (see "Ospod Waitlist" in its README).
-
-## Ad links
-
-Give each ad its own `utm_content` so the CRM can show results per ad:
+## Where things are
 
 ```
-https://<your-domain>/?utm_source=instagram&utm_medium=paid&utm_campaign=waitlist1&utm_content=ig_30
-https://<your-domain>/?utm_source=instagram&utm_medium=paid&utm_campaign=waitlist1&utm_content=ig_15
-https://<your-domain>/studios?utm_source=linkedin&utm_medium=paid&utm_campaign=waitlist1&utm_content=li_30
-https://<your-domain>/studios?utm_source=linkedin&utm_medium=paid&utm_campaign=waitlist1&utm_content=li_15
+src/
+  app/
+    (marketing)/     Home, pricing, privacy, terms (public, static)
+    (auth)/          Sign in, sign up, password reset + their server actions
+    auth/            Email-link callback and sign out
+    app/             The podcaster dashboard (signed in)
+    admin/           Super admin console (super admins only)
+  components/        Logo, buttons, fields, app shell
+  lib/
+    auth.ts          Who's signed in, their workspace, requireSuperAdmin()
+    plans.ts         The five plans, prices and limits (single source of truth)
+    supabase/        Supabase client for the server
+  proxy.ts           Keeps the session fresh and sends signed-out people to /login
+supabase/migrations/ Database schema, permissions and admin functions
 ```
 
-## Run it
+## Security model
+
+- Every table has row level security. People only see the workspaces they belong to.
+- Plan and billing columns can't be changed from the app, only by the server (billing webhooks, Milestone 6).
+- **Super admin** is `profiles.platform_role = 'super_admin'`. It can only be set from the Supabase SQL editor; nobody can promote themselves from the app. Admin pages return "not found" to everyone else.
+
+## Set up (first time)
+
+### 1. Supabase
+
+1. In Supabase, create a new project named **ospod** (region: the one closest to most of your users; Frankfurt `eu-central-1` works well for Kenya and Europe).
+2. Open **SQL Editor → New query**, paste the whole of `supabase/migrations/20261124000000_init.sql`, and click **Run**.
+3. **Authentication → URL Configuration**:
+   - Site URL: your Netlify address for now (later `https://ospod.io`).
+   - Redirect URLs: add `http://localhost:3000/**`, `https://*--<your-netlify-site>.netlify.app/**`, and later `https://ospod.io/**`.
+4. **Project Settings → API Keys**: copy the **Project URL** and the **publishable** key.
+5. Supabase's built-in email sender allows only a few emails an hour. Before inviting real users, connect a proper sender under **Authentication → Emails → SMTP Settings** (we'll set up Resend together).
+
+### 2. Make yourself super admin
+
+Sign up on the site first, then in **SQL Editor** run (with your own email):
+
+```sql
+update public.profiles set platform_role = 'super_admin' where email = 'you@example.com';
+```
+
+Sign out and back in. **Super admin** now appears in the sidebar, at `/admin`.
+
+### 3. Netlify
+
+1. In the Netlify site connected to this repo, go to **Site configuration → Build & deploy → Branches and deploy contexts** and add `platform` under **Branch deploys**. (Production stays on `main`, the waitlist, until launch.)
+2. **Site configuration → Environment variables**, add:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - `NEXT_PUBLIC_CONTACT_EMAIL` (optional)
+3. Push to `platform`. The branch deploy appears at `https://platform--<your-site>.netlify.app`.
+
+### 4. Run it on your computer
 
 ```
 npm install
-cp .env.example .env     # then edit
-npm run dev              # http://localhost:5173
-npm run build            # dist/, plus per-page HTML for /studios and /privacy
+cp .env.example .env.local     # then fill in the Supabase values
+npm run dev                    # http://localhost:3000
 ```
 
-## Settings
+## Commands
 
-Set these in `.env` locally and under **Site settings, Environment variables** on Netlify. All are public (they end up in the browser).
-
-| Name | What it does |
+| Command | What it does |
 |---|---|
-| `VITE_WAITLIST_API_URL` | The `ospod-waitlist` Edge Function URL (defaults to the SDFM project). |
-| `SITE_URL` | The final address, no trailing slash. Used for share previews and the canonical link. Netlify's own `URL` is used if this is empty. |
-| `VITE_CALENDAR_URL` | The "Book a 15-minute call" link shown after signup. Empty hides the button. |
-| `VITE_CONTACT_EMAIL` | The footer "Contact" link and the privacy page's contact address. Empty hides the link. |
-| `VITE_META_PIXEL_ID`, `VITE_LINKEDIN_PARTNER_ID`, `VITE_LINKEDIN_CONVERSION_ID` | Optional ad conversion tracking. Empty means no third-party script is loaded. If you set them, the privacy page mentions Meta and LinkedIn automatically. |
-
-## Deploy
-
-**Netlify:** New site from Git, pick this repo. `netlify.toml` sets the build (`npm run build`, publish `dist`). Add the settings above.
-
-**Custom domain:** add the subdomain in Netlify (Domain management), create the CNAME it asks for at your DNS host, then:
-- set `SITE_URL` to the final address and redeploy;
-- in Supabase run `supabase secrets set OSPOD_ALLOWED_ORIGINS=https://your-final-domain` so the browser is allowed to call the function from it (the function also allows `*.netlify.app`; set `OSPOD_ALLOW_NETLIFY=false` once the custom domain works).
-
-## Before you run ads
-
-- Run the migration and deploy the function (see the `cac-pipeline` README), then submit a test signup on each page and confirm the email arrives and the row shows in the CRM.
-- Have the privacy page reviewed. It describes what the site does today; update it if you add anything.
-- Set `VITE_CALENDAR_URL` and `VITE_CONTACT_EMAIL`, or the call button and contact link stay hidden.
-- Decide your go/no-go number (for example, studio signups at a maximum cost each) before the ads go live.
-- Keep the 500 cap real. When it fills, the pages switch to "Join the waitlist" wording on their own.
+| `npm run dev` | Local development server |
+| `npm run build` | Production build (what Netlify runs) |
+| `npm run lint` | Check the code |
