@@ -59,7 +59,7 @@ supabase/migrations/ Database schema, permissions and admin functions
 ### 1. Supabase
 
 1. In Supabase, create a new project named **ospod** (region: the one closest to most of your users; Frankfurt `eu-central-1` works well for Kenya and Europe).
-2. Open **SQL Editor → New query**, paste the whole of `supabase/migrations/20261124000000_init.sql`, and click **Run**.
+2. Open **SQL Editor → New query** and run each file in `supabase/migrations/` **in name order** (paste the whole file, click **Run**, then the next one). Each new milestone adds files here; run only the new ones.
 3. **Authentication → URL Configuration**:
    - Site URL: your Netlify address for now (later `https://ospod.io`).
    - Redirect URLs: add `http://localhost:3000/**`, `https://*--<your-netlify-site>.netlify.app/**`, and later `https://ospod.io/**`.
