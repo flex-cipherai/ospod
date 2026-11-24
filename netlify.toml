@@ -1,6 +1,9 @@
 # Netlify builds this Next.js app with its Next.js runtime (detected automatically).
 [build]
   command = "npm run build"
+  # Next.js output folder. This overrides the site's UI setting ("dist"), which the
+  # waitlist on main still uses, so both branches deploy correctly.
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "22"
