@@ -6,6 +6,10 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PLANS, formatNumber, formatUsd, monthlyRevenue, type PlanId } from "@/lib/plans";
 import { SignupsChart } from "./signups-chart";
+import { estimateCosts } from "@/lib/costs";
+
+const formatUsdCents = (n: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -46,7 +50,21 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 async function OverviewContent() {
   await requireSuperAdmin();
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_overview");
+  const [{ data, error }, { data: usageRows }, { data: processingRows }] = await Promise.all([
+    supabase.rpc("admin_overview"),
+    supabase.rpc("admin_usage", { days: 30 }),
+    supabase.rpc("admin_processing_summary"),
+  ]);
+  const usage: Record<string, number> = {};
+  let episodesProcessed = 0;
+  for (const r of (usageRows ?? []) as { kind: string; quantity: number | string; episodes: number }[]) {
+    usage[r.kind] = Number(r.quantity);
+    if (r.kind === "processing_seconds") episodesProcessed = Number(r.episodes);
+  }
+  const stages: Record<string, number> = {};
+  for (const r of (processingRows ?? []) as { stage: string; episodes: number }[]) stages[r.stage] = Number(r.episodes);
+  const inFlight = ["uploading", "queued", "preparing", "transcribing", "writing"].reduce((n, s) => n + (stages[s] ?? 0), 0);
+  const costs = estimateCosts(usage);
   if (error || !data) {
     return <Notice tone="error">We couldn't load the platform numbers. {error?.message}</Notice>;
   }
@@ -116,9 +134,30 @@ async function OverviewContent() {
         </table>
       </Card>
 
-      <Notice tone="info">
-        Downloads, publishing jobs, AI usage and processing costs appear here as those parts of Ospod are built.
-      </Notice>
+      <div>
+        <h2 className="mb-1 text-[20px] font-bold tracking-[-0.015em]">Processing and AI</h2>
+        <p className="mb-4 text-sm text-muted">Last 30 days. Costs are estimates from the unit prices in src/lib/costs.ts.</p>
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+          <Stat label="Episodes processed" value={formatNumber(episodesProcessed)} sub={`${formatNumber(inFlight)} in progress now`} />
+          <Stat
+            label="Hours transcribed"
+            value={((usage.transcription_seconds ?? 0) / 3600).toFixed(1)}
+            sub={`≈ ${formatUsdCents(costs.transcription)} transcription`}
+          />
+          <Stat
+            label="AI tokens"
+            value={formatNumber((usage.ai_input_tokens ?? 0) + (usage.ai_output_tokens ?? 0))}
+            sub={`≈ ${formatUsdCents(costs.ai)} AI`}
+          />
+          <Stat
+            label="Failed (7 days)"
+            value={formatNumber(stages.failed ?? 0)}
+            sub={`${formatNumber(stages.ready ?? 0)} finished in 7 days`}
+          />
+        </div>
+      </div>
+
+      <Notice tone="info">Downloads and publishing appear here once one-click publishing is live.</Notice>
     </div>
   );
 }

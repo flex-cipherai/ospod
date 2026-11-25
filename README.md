@@ -21,9 +21,9 @@ The operations hub for audio and video podcasters: publish everywhere with one c
 | # | Milestone | Status |
 |---|---|---|
 | M0 | Foundation: design system, sign-in, dashboard shell, super admin console, marketing site, database | Done |
-| M1 | Shows: import from any host or Apple Podcasts, create, edit, cover art, team invites | **Done** |
-| M2 | Upload and processing: transcoding, transcripts, AI titles, show notes, chapters | Next |
-| M3 | One-click publishing: RSS feeds, YouTube, scheduling, migration | |
+| M1 | Shows: import from any host or Apple Podcasts, create, edit, cover art, team invites | Done |
+| M2 | Upload and processing: loudness-matched audio, transcripts, AI titles, show notes, chapters | **Built** (needs service accounts, see step 5) |
+| M3 | One-click publishing: RSS feeds, YouTube, scheduling, migration | Next |
 | M4 | Analytics hub and "Ask Ospod" | |
 | M5 | Clips and trailers | |
 | M6 | Billing and plans (Paystack) | |
@@ -92,6 +92,37 @@ npm install
 cp .env.example .env.local     # then fill in the Supabase values
 npm run dev                    # http://localhost:3000
 ```
+
+### 5. Episode uploads and processing (Milestone 2)
+
+Uploads go straight from the browser to **Cloudflare R2**. A background job on **Trigger.dev** levels the audio with FFmpeg, **Deepgram** transcribes it, and **Claude** drafts the title, show notes, chapters and clip ideas.
+
+| Service | What to create | Values you'll need |
+|---|---|---|
+| Cloudflare R2 | A bucket named `ospod-media`, and an R2 API token with **Object Read & Write** on that bucket | Account ID, Access Key ID, Secret Access Key |
+| Deepgram | An API key | API key |
+| Anthropic | An API key (with billing set up) | API key |
+| Trigger.dev | A project named `ospod` | Project ref (`proj_…`), Production secret key (`tr_prod_…`) |
+| Supabase | (already have it) | The **secret** key from Project Settings → API Keys |
+
+Where each value goes:
+
+| Name | Netlify | Trigger.dev (Production) |
+|---|---|---|
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (`ospod-media`) | ✓ | ✓ |
+| `TRIGGER_SECRET_KEY` | ✓ | |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | | ✓ |
+| `DEEPGRAM_API_KEY`, `ANTHROPIC_API_KEY` | | ✓ |
+
+Then, once:
+
+```
+node --env-file=.env.local scripts/setup-r2-cors.mjs      # lets browsers upload to the bucket
+npx trigger.dev@latest login
+TRIGGER_PROJECT_REF=proj_xxx npx trigger.dev@latest deploy  # deploys the processing job
+```
+
+Redeploy the processing job whenever files in `src/trigger/` or `src/lib/{media,ai}/` change. Estimated unit costs for the admin console are in `src/lib/costs.ts`.
 
 ## Commands
 

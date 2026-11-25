@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Clock, Settings } from "lucide-react";
+import { ArrowLeft, Clock, Settings, Upload } from "lucide-react";
 import { Artwork } from "@/components/artwork";
 import { Badge, Card, Notice, Skeleton, buttonClass } from "@/components/ui";
 import { requireWorkspace, roleAtLeast } from "@/lib/auth";
@@ -41,6 +41,7 @@ type Episode = {
   episode_number: number | null;
   published_at: string | null;
   duration_seconds: number | null;
+  processing_stage: string | null;
 };
 
 const statusBadge = {
@@ -84,9 +85,10 @@ async function ShowContent({
       .maybeSingle<Show>(),
     supabase
       .from("episodes")
-      .select("id, title, description, status, episode_type, season_number, episode_number, published_at, duration_seconds", { count: "exact" })
+      .select("id, title, description, status, episode_type, season_number, episode_number, published_at, duration_seconds, processing_stage", { count: "exact" })
       .eq("show_id", id)
       .order("published_at", { ascending: false, nullsFirst: true })
+      .order("created_at", { ascending: false })
       .limit(EPISODES_SHOWN)
       .returns<Episode[]>(),
   ]);
@@ -132,9 +134,14 @@ async function ShowContent({
           {show.description && <p className="mt-4 max-w-3xl text-[15px] text-slate">{plainText(show.description, 280)}</p>}
         </div>
         {canEdit && (
-          <Link href={`/app/shows/${show.id}/settings`} className={buttonClass({ variant: "secondary" })}>
-            <Settings size={18} aria-hidden="true" /> Show settings
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link href={`/app/shows/${show.id}/settings`} className={buttonClass({ variant: "secondary" })}>
+              <Settings size={18} aria-hidden="true" /> Show settings
+            </Link>
+            <Link href={`/app/shows/${show.id}/episodes/new`} className={buttonClass()}>
+              <Upload size={18} aria-hidden="true" /> New episode
+            </Link>
+          </div>
         )}
       </header>
 
@@ -165,7 +172,12 @@ async function ShowContent({
         {total === 0 ? (
           <Card className="px-8 py-14 text-center">
             <p className="text-[17px] font-semibold">No episodes yet</p>
-            <p className="mt-1 text-[15px] text-slate">Uploading and publishing episodes arrives in the next update.</p>
+            <p className="mt-1 text-[15px] text-slate">Upload your first one and Ospod drafts the title, show notes and chapters.</p>
+            {canEdit && (
+              <Link href={`/app/shows/${show.id}/episodes/new`} className={buttonClass({ className: "mt-5" })}>
+                <Upload size={18} aria-hidden="true" /> Upload an episode
+              </Link>
+            )}
           </Card>
         ) : (
           <Card className="overflow-hidden">
@@ -182,17 +194,23 @@ async function ShowContent({
                 {(episodes ?? []).map((e) => (
                   <tr key={e.id} className="border-b border-line align-top last:border-0">
                     <td className="max-w-0 px-6 py-3.5">
-                      <p className="truncate font-semibold">
+                      <Link href={`/app/shows/${show.id}/episodes/${e.id}`} className="block truncate font-semibold hover:underline">
                         {e.episode_number && <span className="mr-1.5 text-muted tabular-nums">#{e.episode_number}</span>}
                         {e.title}
-                      </p>
+                      </Link>
                       {e.description && <p className="truncate text-sm text-muted">{plainText(e.description, 160)}</p>}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-slate">{formatDate(e.published_at)}</td>
                     <td className="px-4 py-3.5 text-right whitespace-nowrap text-slate tabular-nums">{formatDuration(e.duration_seconds)}</td>
                     <td className="px-6 py-3.5">
                       <div className="flex flex-wrap gap-1.5">
-                        <Badge tone={statusBadge[e.status].tone}>{statusBadge[e.status].label}</Badge>
+                        {e.processing_stage && e.processing_stage !== "ready" ? (
+                          <Badge tone={e.processing_stage === "failed" ? "danger" : "gold"}>
+                            {e.processing_stage === "failed" ? "Needs attention" : e.processing_stage === "uploading" ? "Uploading" : "Processing"}
+                          </Badge>
+                        ) : (
+                          <Badge tone={statusBadge[e.status].tone}>{statusBadge[e.status].label}</Badge>
+                        )}
                         {e.episode_type !== "full" && <Badge>{e.episode_type === "trailer" ? "Trailer" : "Bonus"}</Badge>}
                       </div>
                     </td>
