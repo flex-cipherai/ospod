@@ -2,14 +2,15 @@ import { Suspense, type ReactNode } from "react";
 import { BarChart3, Home, Mic2, Scissors, Send, Settings, ShieldCheck, Users, Building2, LayoutDashboard, ArrowLeft } from "lucide-react";
 import { OspodLogo } from "@/components/logo";
 import { Skeleton } from "@/components/ui";
-import { getProfile, getWorkspace, firstName } from "@/lib/auth";
+import { getProfile, getWorkspace, getWorkspaces, firstName } from "@/lib/auth";
+import { switchWorkspace } from "@/app/app/workspace-actions";
 import { NavLink } from "@/components/nav-link";
 
 type NavItem = { href: string; label: string; icon: ReactNode; soon?: string };
 
 const appNav: NavItem[] = [
   { href: "/app", label: "Home", icon: <Home size={18} /> },
-  { href: "/app/shows", label: "Shows", icon: <Mic2 size={18} />, soon: "Soon" },
+  { href: "/app/shows", label: "Shows", icon: <Mic2 size={18} /> },
   { href: "/app/publish", label: "Publish", icon: <Send size={18} />, soon: "Soon" },
   { href: "/app/clips", label: "Clips", icon: <Scissors size={18} />, soon: "Soon" },
   { href: "/app/analytics", label: "Analytics", icon: <BarChart3 size={18} />, soon: "Soon" },
@@ -50,13 +51,37 @@ function NavList({ items }: { items: NavItem[] }) {
 }
 
 async function AccountBlock({ area }: { area: "app" | "admin" }) {
-  const [profile, workspace] = await Promise.all([getProfile(), getWorkspace()]);
+  const [profile, workspace, workspaces] = await Promise.all([getProfile(), getWorkspace(), getWorkspaces()]);
   if (!profile) return null;
   const isAdmin = profile.platform_role === "super_admin";
   const initial = firstName(profile).charAt(0).toUpperCase();
 
   return (
     <div className="space-y-1">
+      {area === "app" && workspaces.length > 1 && workspace && (
+        <form action={switchWorkspace} className="mb-3">
+          <label htmlFor="workspace-switch" className="mb-1 block px-1 text-xs font-semibold text-muted">
+            Workspace
+          </label>
+          <div className="flex gap-1.5">
+            <select
+              id="workspace-switch"
+              name="workspace_id"
+              defaultValue={workspace.id}
+              className="h-10 min-w-0 flex-1 rounded-lg border-[1.5px] border-line-strong bg-white px-2 text-sm font-semibold"
+            >
+              {workspaces.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="rounded-lg bg-ink px-3 text-xs font-semibold text-white hover:bg-ink-hover">
+              Switch
+            </button>
+          </div>
+        </form>
+      )}
       {area === "app" && (
         <NavLink href="/app/settings">
           <Settings size={18} aria-hidden="true" />

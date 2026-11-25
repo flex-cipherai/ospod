@@ -86,7 +86,7 @@ export async function signUp(_prev: AuthState, form: FormData): Promise<AuthStat
     password: parsed.data.password,
     options: {
       data: { full_name: parsed.data.full_name },
-      emailRedirectTo: `${await origin()}/auth/callback?next=/app`,
+      emailRedirectTo: `${await origin()}/auth/callback?next=${encodeURIComponent(safeNext(form.get("next")))}`,
     },
   });
   if (error) {
@@ -98,7 +98,7 @@ export async function signUp(_prev: AuthState, form: FormData): Promise<AuthStat
   }
 
   // Email confirmation off: they're signed in straight away.
-  if (data.session) redirect("/app");
+  if (data.session) redirect(safeNext(form.get("next")));
   return { sentTo: parsed.data.email };
 }
 

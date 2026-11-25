@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/app-shell";
-import { Badge, Card, Skeleton } from "@/components/ui";
+import Link from "next/link";
+import { Badge, Card, Skeleton, buttonClass } from "@/components/ui";
 import { getWorkspace, requireProfile } from "@/lib/auth";
 import { planById } from "@/lib/plans";
 import { ProfileForm, WorkspaceForm } from "./forms";
@@ -37,6 +38,18 @@ async function Settings() {
         <Card className="p-8">
           <h2 className="mb-6 text-[22px] font-bold tracking-[-0.015em]">Workspace</h2>
           <WorkspaceForm name={workspace.name} canEdit={workspace.role === "owner" || workspace.role === "admin"} />
+        </Card>
+      )}
+
+      {workspace && (
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-8">
+          <div>
+            <h2 className="mb-1 text-[22px] font-bold tracking-[-0.015em]">Team</h2>
+            <p className="text-[15px] text-slate">Invite producers, editors and co-hosts. Unlimited on every plan.</p>
+          </div>
+          <Link href="/app/settings/team" className={buttonClass({ variant: "secondary" })}>
+            Manage team
+          </Link>
         </Card>
       )}
 

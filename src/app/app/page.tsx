@@ -5,6 +5,7 @@ import { clsx } from "clsx";
 import { Card, Skeleton, buttonClass } from "@/components/ui";
 import { firstName, requireProfile, getWorkspace } from "@/lib/auth";
 import { planById } from "@/lib/plans";
+import { createClient } from "@/lib/supabase/server";
 
 export default function DashboardHome() {
   return (
@@ -27,12 +28,25 @@ async function Home() {
   const plan = workspace ? planById(workspace.plan) : undefined;
   const trialDays = workspace?.plan_status === "trialing" ? daysLeft(workspace.trial_ends_at) : null;
 
+  let showCount = 0;
+  if (workspace) {
+    const supabase = await createClient();
+    const { count } = await supabase.from("shows").select("id", { count: "exact", head: true }).eq("workspace_id", workspace.id);
+    showCount = count ?? 0;
+  }
+
   const steps: Step[] = [
     { title: "Create your account", body: "You're in. Welcome to Ospod.", icon: <Check size={18} />, done: true },
     {
       title: "Add your show",
-      body: "Import it from your current host in about a minute, or start a new one. Nothing changes for your listeners.",
+      body: showCount
+        ? `${showCount} ${showCount === 1 ? "show is" : "shows are"} in Ospod.`
+        : "Import it from your current host in about a minute, or start a new one. Nothing changes for your listeners.",
       icon: <Mic2 size={18} />,
+      done: showCount > 0,
+      available: true,
+      href: showCount ? "/app/shows" : "/app/shows/new",
+      cta: "Add your show",
     },
     {
       title: "Connect YouTube",
@@ -98,10 +112,20 @@ async function Home() {
                   </h3>
                   <p className="mt-0.5 text-[15px] text-slate">{step.body}</p>
                 </div>
-                {!step.done && (
-                  <span className="self-center rounded-full bg-canvas px-3 py-1 text-xs font-semibold whitespace-nowrap text-muted">
-                    Coming soon
-                  </span>
+                {!step.done &&
+                  (step.available && step.href ? (
+                    <Link href={step.href} className={buttonClass({ size: "sm", className: "self-center" })}>
+                      {step.cta}
+                    </Link>
+                  ) : (
+                    <span className="self-center rounded-full bg-canvas px-3 py-1 text-xs font-semibold whitespace-nowrap text-muted">
+                      Coming soon
+                    </span>
+                  ))}
+                {step.done && step.href && (
+                  <Link href={step.href} className="self-center text-sm font-semibold text-success underline-offset-2 hover:underline">
+                    View
+                  </Link>
                 )}
               </li>
             ))}

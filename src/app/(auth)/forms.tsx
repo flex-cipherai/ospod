@@ -180,6 +180,7 @@ export function LoginForm({ google }: { google: boolean }) {
 }
 
 export function SignupForm({ google }: { google: boolean }) {
+  const next = useSearchParams().get("next") ?? "/app";
   const [state, action, pending] = useActionState(signUp, initial);
 
   if (state.sentTo) {
@@ -193,13 +194,14 @@ export function SignupForm({ google }: { google: boolean }) {
 
       {google && (
         <>
-          <GoogleButton next="/app" />
+          <GoogleButton next={next} />
           <Divider />
         </>
       )}
 
       <form action={action} className="space-y-5" noValidate>
         {state.error && <Notice tone="error">{state.error}</Notice>}
+        <input type="hidden" name="next" value={next} />
         <Field
           id="full_name"
           label="Your name"
@@ -240,7 +242,7 @@ export function SignupForm({ google }: { google: boolean }) {
 
       <p className="mt-8 text-center text-[15px] text-slate">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-ink underline underline-offset-2">
+        <Link href={next === "/app" ? "/login" : `/login?next=${encodeURIComponent(next)}`} className="font-semibold text-ink underline underline-offset-2">
           Sign in
         </Link>
       </p>

@@ -20,9 +20,9 @@ The operations hub for audio and video podcasters: publish everywhere with one c
 
 | # | Milestone | Status |
 |---|---|---|
-| M0 | Foundation: design system, sign-in, dashboard shell, super admin console, marketing site, database | **Done** |
-| M1 | Shows and import from any host | Next |
-| M2 | Upload and processing: transcoding, transcripts, AI titles, show notes, chapters | |
+| M0 | Foundation: design system, sign-in, dashboard shell, super admin console, marketing site, database | Done |
+| M1 | Shows: import from any host or Apple Podcasts, create, edit, cover art, team invites | **Done** |
+| M2 | Upload and processing: transcoding, transcripts, AI titles, show notes, chapters | Next |
 | M3 | One-click publishing: RSS feeds, YouTube, scheduling, migration | |
 | M4 | Analytics hub and "Ask Ospod" | |
 | M5 | Clips and trailers | |

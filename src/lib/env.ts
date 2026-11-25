@@ -17,6 +17,9 @@ export function siteUrl(): string {
   return raw.replace(/\/+$/, "");
 }
 
+/** Where podcast feeds will be served (Milestone 3). */
+export const FEED_HOST = "feeds.ospod.io";
+
 export const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "flex@sdfmgroup.com";
 
 export const googleSignInEnabled = process.env.NEXT_PUBLIC_GOOGLE_SIGN_IN === "true";
