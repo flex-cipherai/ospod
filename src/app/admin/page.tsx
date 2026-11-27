@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/app-shell";
-import { Card, Notice, Skeleton } from "@/components/ui";
+import { Badge, Card, Notice, Skeleton } from "@/components/ui";
+import { r2Config } from "@/lib/media/r2";
 import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PLANS, formatNumber, formatUsd, monthlyRevenue, type PlanId } from "@/lib/plans";
@@ -134,6 +135,8 @@ async function OverviewContent() {
         </table>
       </Card>
 
+      <SetupChecks />
+
       <div>
         <h2 className="mb-1 text-[20px] font-bold tracking-[-0.015em]">Processing and AI</h2>
         <p className="mb-4 text-sm text-muted">Last 30 days. Costs are estimates from the unit prices in src/lib/costs.ts.</p>
@@ -159,6 +162,44 @@ async function OverviewContent() {
 
       <Notice tone="info">Downloads and publishing appear here once one-click publishing is live.</Notice>
     </div>
+  );
+}
+
+/** Settings the live site needs, checked on the server. Shows only whether each is right, never the values. */
+function SetupChecks() {
+  const triggerKey = process.env.TRIGGER_SECRET_KEY ?? "";
+  const checks: { label: string; ok: boolean; detail: string }[] = [
+    {
+      label: "Media storage (Cloudflare R2)",
+      ok: r2Config() !== null,
+      detail: r2Config() ? "Connected" : "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY or R2_BUCKET is missing in Netlify",
+    },
+    {
+      label: "Processing jobs (Trigger.dev)",
+      ok: triggerKey.startsWith("tr_prod_"),
+      detail: !triggerKey
+        ? "TRIGGER_SECRET_KEY is missing in Netlify"
+        : triggerKey.startsWith("tr_dev_")
+          ? "TRIGGER_SECRET_KEY is the Development key, so jobs wait forever. Use the Production key (tr_prod_…) and redeploy."
+          : triggerKey.startsWith("tr_prod_")
+            ? "Connected to Production"
+            : "TRIGGER_SECRET_KEY doesn't look like a Trigger.dev secret key",
+    },
+  ];
+  const allOk = checks.every((c) => c.ok);
+  return (
+    <Card className={allOk ? "p-6" : "border-l-[6px] border-l-danger p-6"}>
+      <h2 className="mb-3 text-[17px] font-bold">Setup</h2>
+      <ul className="space-y-2">
+        {checks.map((c) => (
+          <li key={c.label} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[15px]">
+            <Badge tone={c.ok ? "success" : "danger"}>{c.ok ? "OK" : "Needs fixing"}</Badge>
+            <span className="font-semibold">{c.label}</span>
+            <span className="text-slate">{c.detail}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
 

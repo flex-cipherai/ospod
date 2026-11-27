@@ -8,6 +8,7 @@ import { requireWorkspace, roleAtLeast } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { r2Config, signedDownloadUrl } from "@/lib/media/r2";
 import { clock, formatDate, formatDuration } from "@/lib/podcast-meta";
+import { isStuck } from "@/lib/processing";
 import { deleteEpisode, retryProcessing, saveEpisode } from "../actions";
 import { EpisodeEditor, type AiDraft } from "./episode-editor";
 import { MediaTranscript } from "./media-transcript";
@@ -35,6 +36,7 @@ type Episode = {
   original_filename: string | null;
   processing_stage: string | null;
   processing_error: string | null;
+  updated_at: string;
   imported: boolean;
   shows: { title: string; workspace_id: string };
 };
@@ -61,7 +63,7 @@ async function EpisodeContent({
   const { data: episode } = await supabase
     .from("episodes")
     .select(
-      "id, show_id, title, description, status, episode_type, season_number, episode_number, explicit, chapters, duration_seconds, published_at, media_kind, audio_key, audio_url, original_filename, processing_stage, processing_error, imported, shows!inner(title, workspace_id)",
+      "id, show_id, title, description, status, episode_type, season_number, episode_number, explicit, chapters, duration_seconds, published_at, media_kind, audio_key, audio_url, original_filename, processing_stage, processing_error, imported, updated_at, shows!inner(title, workspace_id)",
     )
     .eq("id", episodeId)
     .eq("show_id", id)
@@ -72,6 +74,7 @@ async function EpisodeContent({
   const canEdit = roleAtLeast(workspace.role, "editor");
   const stage = episode.processing_stage;
   const processing = stage !== null && stage !== "ready" && stage !== "failed";
+  const stuck = isStuck(stage, episode.updated_at);
 
   const [{ data: draft }, { data: transcript }] = await Promise.all([
     supabase.from("episode_ai_drafts").select("titles, summary, show_notes, chapters, clip_ideas").eq("episode_id", episodeId).maybeSingle(),
@@ -108,6 +111,18 @@ async function EpisodeContent({
         <Card className="mb-8 max-w-3xl p-8">
           <h2 className="mb-6 text-[22px] font-bold tracking-[-0.015em]">Ospod is working on your episode</h2>
           <ProcessingStatus stage={stage!} />
+          {stuck && (
+            <div className="mt-6 rounded-xl bg-gold-soft p-4">
+              <p className="font-semibold text-gold-ink">This is taking longer than usual to start.</p>
+              {canEdit && (
+                <form action={retryProcessing.bind(null, episode.id)} className="mt-3">
+                  <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
+                    <RotateCcw size={16} aria-hidden="true" /> Try again
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
         </Card>
       )}
 

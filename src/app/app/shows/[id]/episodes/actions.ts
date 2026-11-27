@@ -17,6 +17,7 @@ import {
   startMultipartUpload,
 } from "@/lib/media/r2";
 import type { processEpisode } from "@/trigger/process-episode";
+import { isStuck } from "@/lib/processing";
 
 const MAX_AUDIO_BYTES = 2 * 1024 ** 3; // 2 GB
 const MAX_VIDEO_BYTES = 25 * 1024 ** 3; // 25 GB
@@ -112,7 +113,7 @@ async function uploadingEpisode(episodeId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("episodes")
-    .select("id, show_id, original_key, upload_id, audio_key, original_bytes, processing_stage, shows!inner(workspace_id)")
+    .select("id, show_id, original_key, upload_id, audio_key, original_bytes, processing_stage, updated_at, shows!inner(workspace_id)")
     .eq("id", episodeId)
     .eq("shows.workspace_id", workspace.id)
     .maybeSingle();
@@ -153,6 +154,10 @@ export async function finishEpisodeUpload(
 
 async function queueProcessing(episodeId: string) {
   const supabase = await createClient();
+  if (process.env.TRIGGER_SECRET_KEY?.startsWith("tr_dev_") && process.env.NODE_ENV === "production") {
+    // A Development key sends jobs to a queue nothing processes on the live site.
+    console.error("TRIGGER_SECRET_KEY is a Development key (tr_dev_…). Use the Production key (tr_prod_…).");
+  }
   try {
     const handle = await tasks.trigger<typeof processEpisode>("process-episode", { episodeId }, { idempotencyKey: `process-${episodeId}-${Date.now()}` });
     await supabase.from("episodes").update({ processing_run_id: handle.id }).eq("id", episodeId);
@@ -174,7 +179,10 @@ export async function cancelEpisodeUpload(episodeId: string): Promise<void> {
 
 export async function retryProcessing(episodeId: string): Promise<void> {
   const found = await uploadingEpisode(episodeId);
-  if (!found || found.episode.processing_stage !== "failed" || !found.episode.original_key) return;
+  if (!found || !found.episode.original_key) return;
+  const stage = found.episode.processing_stage;
+  const stuck = isStuck(stage, found.episode.updated_at as string);
+  if (stage !== "failed" && !stuck) return;
   await found.supabase.from("episodes").update({ processing_stage: "queued", processing_error: null }).eq("id", episodeId);
   await queueProcessing(episodeId);
   revalidatePath(`/app/shows/${found.episode.show_id}/episodes/${episodeId}`);

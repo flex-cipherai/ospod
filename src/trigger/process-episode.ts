@@ -11,7 +11,9 @@ import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
-import { logger, task } from "@trigger.dev/sdk";
+import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
+
+const REQUIRED_ENV = ["SUPABASE_URL", "SUPABASE_SECRET_KEY", "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "ANTHROPIC_API_KEY"];
 import { createServiceClient } from "@/lib/supabase/service";
 import { getObjectStream, mediaKeys, putObject, signedDownloadUrl } from "@/lib/media/r2";
 import { transcribeUrl, transcriptForPrompt, transcriptionProvider } from "@/lib/media/transcribe";
@@ -54,6 +56,24 @@ export const processEpisode = task({
   maxDuration: 60 * 60,
   retry: { maxAttempts: 2, minTimeoutInMs: 10_000 },
   run: async ({ episodeId }: { episodeId: string }) => {
+    // Fail fast, with the names of any missing settings, instead of retrying a job that can't work.
+    const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
+    if (!process.env.ELEVENLABS_API_KEY && !process.env.DEEPGRAM_API_KEY) missing.push("ELEVENLABS_API_KEY");
+    if (missing.length > 0) {
+      logger.error("Processing job is missing environment variables", { missing });
+      if (process.env.SUPABASE_URL && process.env.SUPABASE_SECRET_KEY) {
+        await createServiceClient()
+          .from("episodes")
+          .update({
+            processing_stage: "failed",
+            processing_error: `Processing isn't fully set up yet. Missing in Trigger.dev: ${missing.join(", ")}.`,
+            processing_finished_at: new Date().toISOString(),
+          })
+          .eq("id", episodeId);
+      }
+      throw new AbortTaskRunError(`Missing environment variables: ${missing.join(", ")}`);
+    }
+
     const db = createServiceClient();
     const startedAt = Date.now();
 
