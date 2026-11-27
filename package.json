@@ -14,7 +14,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1177.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.2",
-    "@trigger.dev/sdk": "^4.8.10",
+    "@trigger.dev/sdk": "4.8.10",
     "clsx": "^2.1.1",
     "fast-xml-parser": "^5.12.1",
     "lucide-react": "^1.79.0",
@@ -25,7 +25,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
-    "@trigger.dev/build": "^4.8.10",
+    "@trigger.dev/build": "4.8.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
