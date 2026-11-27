@@ -18,6 +18,7 @@ import {
 } from "@/lib/media/r2";
 import type { processEpisode } from "@/trigger/process-episode";
 import { isStuck } from "@/lib/processing";
+import { episodeProblems, showProblems, type ReadinessShow } from "@/lib/publishing";
 
 const MAX_AUDIO_BYTES = 2 * 1024 ** 3; // 2 GB
 const MAX_VIDEO_BYTES = 25 * 1024 ** 3; // 25 GB
@@ -260,4 +261,67 @@ export async function deleteEpisode(episodeId: string): Promise<void> {
   if (r2Config()) await deleteObjects([found.episode.original_key, found.episode.audio_key]);
   revalidatePath(`/app/shows/${found.episode.show_id}`);
   redirect(`/app/shows/${found.episode.show_id}?episodeDeleted=1`);
+}
+
+// ---------------------------------------------------------------------------
+// Publishing
+// ---------------------------------------------------------------------------
+
+export type PublishResult = { ok: true; scheduled: boolean } | { ok: false; problems: string[] };
+
+/** Publish now (when = null) or schedule for a future time (ISO string). */
+export async function publishEpisode(episodeId: string, when: string | null): Promise<PublishResult> {
+  const workspace = await requireWorkspace("editor");
+  if (!UUID.test(episodeId)) return { ok: false, problems: ["We couldn't find that episode."] };
+  const supabase = await createClient();
+  const { data: episode } = await supabase
+    .from("episodes")
+    .select(
+      "id, title, audio_key, source_media_url, processing_stage, show_id, shows!inner(id, workspace_id, title, description, author, owner_email, category, artwork_url, imported_from_feed, owner_verified_at, feed_live_at, status)",
+    )
+    .eq("id", episodeId)
+    .eq("shows.workspace_id", workspace.id)
+    .maybeSingle();
+  if (!episode) return { ok: false, problems: ["We couldn't find that episode."] };
+  const show = episode.shows as unknown as ReadinessShow & { feed_live_at: string | null; status: string };
+
+  const problems = [...showProblems(show), ...episodeProblems(episode)].map((p) => p.message);
+
+  let publishAt = new Date();
+  if (when) {
+    publishAt = new Date(when);
+    if (Number.isNaN(publishAt.getTime())) problems.push("Choose a valid date and time.");
+    else if (publishAt.getTime() < Date.now() + 60_000) problems.push("Choose a time in the future, or publish now.");
+    else if (publishAt.getTime() > Date.now() + 366 * 86_400_000) problems.push("You can schedule up to a year ahead.");
+  }
+  if (problems.length) return { ok: false, problems };
+
+  const scheduled = when !== null;
+  const { error } = await supabase
+    .from("episodes")
+    .update({ status: scheduled ? "scheduled" : "published", published_at: publishAt.toISOString() })
+    .eq("id", episodeId);
+  if (error) return { ok: false, problems: ["We couldn't publish the episode. Please try again."] };
+
+  // A brand-new show's feed goes live with its first episode.
+  if (!show.feed_live_at && !show.imported_from_feed) {
+    await supabase.from("shows").update({ feed_live_at: new Date().toISOString(), status: "active" }).eq("id", show.id);
+  }
+  revalidatePath(`/app/shows/${episode.show_id}`, "layout");
+  return { ok: true, scheduled };
+}
+
+/** Takes the episode out of the feed. Apps remove it on their next check. */
+export async function unpublishEpisode(episodeId: string): Promise<void> {
+  const workspace = await requireWorkspace("editor");
+  if (!UUID.test(episodeId)) return;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("episodes")
+    .update({ status: "draft", published_at: null })
+    .eq("id", episodeId)
+    .select("show_id, shows!inner(workspace_id)")
+    .eq("shows.workspace_id", workspace.id)
+    .maybeSingle();
+  if (data) revalidatePath(`/app/shows/${data.show_id}`, "layout");
 }

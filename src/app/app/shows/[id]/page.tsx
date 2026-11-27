@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Clock, Settings, Upload } from "lucide-react";
+import { ArrowLeft, Clock, Radio, Settings, Upload } from "lucide-react";
 import { Artwork } from "@/components/artwork";
 import { Badge, Card, Notice, Skeleton, buttonClass } from "@/components/ui";
 import { requireWorkspace, roleAtLeast } from "@/lib/auth";
@@ -137,6 +137,9 @@ async function ShowContent({
           <div className="flex flex-wrap gap-3">
             <Link href={`/app/shows/${show.id}/settings`} className={buttonClass({ variant: "secondary" })}>
               <Settings size={18} aria-hidden="true" /> Show settings
+            </Link>
+            <Link href={`/app/shows/${show.id}/distribution`} className={buttonClass({ variant: "secondary" })}>
+              <Radio size={18} aria-hidden="true" /> Distribution
             </Link>
             <Link href={`/app/shows/${show.id}/episodes/new`} className={buttonClass()}>
               <Upload size={18} aria-hidden="true" /> New episode

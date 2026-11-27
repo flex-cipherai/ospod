@@ -15,7 +15,25 @@ const matches = (path: string, prefixes: string[]) =>
  * signed-in check. Real authorisation (including the super admin check) happens
  * on the server for each page and in the database's row level security.
  */
+const PUBLIC_MEDIA = /^\/(feed|e|c|t)\//;
+
 export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  // The feeds domain (feeds.ospod.io) serves only feeds and media: /my-show → the show's feed.
+  if (request.headers.get("host")?.startsWith("feeds.")) {
+    if (PUBLIC_MEDIA.test(path)) return NextResponse.next();
+    const slug = path.slice(1).replace(/\/+$/, "");
+    if (/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9](\.xml|\.rss)?$/i.test(slug)) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/feed/${slug}`;
+      return NextResponse.rewrite(url);
+    }
+    return new NextResponse("Not found", { status: 404 });
+  }
+  // Podcast apps never sign in: skip the session work for feeds and media.
+  if (PUBLIC_MEDIA.test(path)) return NextResponse.next();
+
   const config = supabaseConfig();
   if (!config) return NextResponse.next({ request });
 
@@ -38,7 +56,6 @@ export async function proxy(request: NextRequest) {
   // getClaims() verifies the token. Don't add code between creating the client and this call.
   const { data } = await supabase.auth.getClaims();
   const signedIn = Boolean(data?.claims?.sub);
-  const path = request.nextUrl.pathname;
 
   const redirectTo = (target: URL) => {
     const redirect = NextResponse.redirect(target);

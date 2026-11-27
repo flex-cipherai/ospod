@@ -13,6 +13,9 @@ import { deleteEpisode, retryProcessing, saveEpisode } from "../actions";
 import { EpisodeEditor, type AiDraft } from "./episode-editor";
 import { MediaTranscript } from "./media-transcript";
 import { ProcessingStatus } from "./processing-status";
+import { PublishPanel } from "./publish-panel";
+import { episodeProblems, isLiveNow, showProblems, type ReadinessShow } from "@/lib/publishing";
+import { feedUrl } from "@/lib/feeds/urls";
 
 export const metadata: Metadata = { title: "Episode" };
 
@@ -38,7 +41,8 @@ type Episode = {
   processing_error: string | null;
   updated_at: string;
   imported: boolean;
-  shows: { title: string; workspace_id: string };
+  source_media_url: string | null;
+  shows: ReadinessShow & { workspace_id: string; feed_slug: string; feed_live_at: string | null };
 };
 
 export default function EpisodePage({ params, searchParams }: PageProps<"/app/shows/[id]/episodes/[episodeId]">) {
@@ -63,7 +67,7 @@ async function EpisodeContent({
   const { data: episode } = await supabase
     .from("episodes")
     .select(
-      "id, show_id, title, description, status, episode_type, season_number, episode_number, explicit, chapters, duration_seconds, published_at, media_kind, audio_key, audio_url, original_filename, processing_stage, processing_error, imported, updated_at, shows!inner(title, workspace_id)",
+      "id, show_id, title, description, status, episode_type, season_number, episode_number, explicit, chapters, duration_seconds, published_at, media_kind, audio_key, audio_url, original_filename, processing_stage, processing_error, imported, updated_at, source_media_url, shows!inner(id, title, workspace_id, description, author, owner_email, category, artwork_url, imported_from_feed, owner_verified_at, feed_slug, feed_live_at)",
     )
     .eq("id", episodeId)
     .eq("show_id", id)
@@ -175,6 +179,19 @@ async function EpisodeContent({
           </Card>
 
           <div className="space-y-6">
+            <Card className="p-6">
+              <PublishPanel
+                episodeId={episode.id}
+                status={episode.status as "draft" | "scheduled" | "published"}
+                live={isLiveNow(episode.status, episode.published_at)}
+                publishedAt={episode.published_at}
+                problems={[...showProblems(episode.shows), ...episodeProblems(episode)]}
+                feedUrl={episode.shows.feed_live_at ? feedUrl(episode.shows.feed_slug) : null}
+                distributionHref={`/app/shows/${episode.show_id}/distribution`}
+                canEdit={canEdit}
+              />
+            </Card>
+
             {(audioUrl || transcript) && (
               <Card className="p-6">
                 <MediaTranscript

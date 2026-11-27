@@ -210,7 +210,7 @@ export function EpisodeEditor({
           <button type="submit" disabled={pending} className={buttonClass({ size: "lg" })}>
             {pending ? "Saving…" : "Save episode"}
           </button>
-          <p className="text-sm text-muted">Publishing to every platform arrives with the next update.</p>
+          <p className="text-sm text-muted">Publish or schedule from the Publishing panel.</p>
         </div>
       )}
     </form>
