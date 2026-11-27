@@ -36,6 +36,24 @@ function run(cmd: string, args: string[]): Promise<string> {
   });
 }
 
+/** Explains, without revealing it, why a key can't be the Supabase secret key. */
+function supabaseKeyProblem(key: string): string | null {
+  if (key.startsWith("sb_secret_")) return null;
+  if (key.startsWith("sb_publishable_")) {
+    return "SUPABASE_SECRET_KEY in Trigger.dev is the publishable key. Use the secret key (starts with sb_secret_) from Supabase → Project Settings → API Keys.";
+  }
+  if (key.startsWith("eyJ")) {
+    try {
+      const role = JSON.parse(Buffer.from(key.split(".")[1], "base64url").toString("utf8")).role;
+      if (role === "service_role") return null;
+      return `SUPABASE_SECRET_KEY in Trigger.dev is the "${role}" key. Use the secret (service_role) key.`;
+    } catch {
+      return "SUPABASE_SECRET_KEY in Trigger.dev isn't a valid Supabase key.";
+    }
+  }
+  return "SUPABASE_SECRET_KEY in Trigger.dev doesn't look like a Supabase secret key (it should start with sb_secret_).";
+}
+
 const FFMPEG = () => process.env.FFMPEG_PATH || "ffmpeg";
 const FFPROBE = () => process.env.FFPROBE_PATH || "ffprobe";
 
@@ -74,6 +92,14 @@ export const processEpisode = task({
       throw new AbortTaskRunError(`Missing environment variables: ${missing.join(", ")}`);
     }
 
+    const keyProblem = supabaseKeyProblem(process.env.SUPABASE_SECRET_KEY!);
+    if (keyProblem) {
+      logger.error("Wrong Supabase key", { problem: keyProblem });
+      throw new AbortTaskRunError(keyProblem);
+    }
+    const projectRef = new URL(process.env.SUPABASE_URL!).hostname.split(".")[0];
+    logger.info("Connecting to Supabase", { projectRef });
+
     const db = createServiceClient();
     const startedAt = Date.now();
 
@@ -89,7 +115,13 @@ export const processEpisode = task({
       )
       .eq("id", episodeId)
       .single();
-    if (error || !episode) throw new Error(`Episode ${episodeId} not found`);
+    if (error || !episode) {
+      // Most likely SUPABASE_URL points at a different project than the one the website uses.
+      throw new AbortTaskRunError(
+        `Episode ${episodeId} not found in Supabase project "${projectRef}"` +
+          (error ? ` (${error.code}: ${error.message})` : ". Check SUPABASE_URL in Trigger.dev matches the website's project."),
+      );
+    }
     if (!episode.original_key) throw new FriendlyError("The uploaded file is missing. Please upload it again.");
 
     const show = episode.shows as unknown as {
