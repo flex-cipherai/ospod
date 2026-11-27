@@ -1,7 +1,7 @@
 /**
  * Turns an uploaded episode into something ready to publish:
  *   1. Prepare audio  - extract and loudness-match the audio (-16 LUFS, the podcast standard) as a 128 kbps MP3
- *   2. Transcribe     - Deepgram, with speakers
+ *   2. Transcribe     - ElevenLabs Scribe (or Deepgram), with speakers
  *   3. Write          - Claude drafts titles, show notes, chapters and clip ideas
  * Runs on Trigger.dev (long-running, with FFmpeg), not on Netlify.
  */
@@ -14,7 +14,7 @@ import { pipeline } from "node:stream/promises";
 import { logger, task } from "@trigger.dev/sdk";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getObjectStream, mediaKeys, putObject, signedDownloadUrl } from "@/lib/media/r2";
-import { transcribeUrl, transcriptForPrompt } from "@/lib/media/transcribe";
+import { transcribeUrl, transcriptForPrompt, transcriptionProvider } from "@/lib/media/transcribe";
 import { draftEpisodeCopy } from "@/lib/ai/episode-writer";
 
 type Stage = "preparing" | "transcribing" | "writing" | "ready" | "failed";
@@ -136,9 +136,9 @@ export const processEpisode = task({
       text: transcript.text,
       segments: transcript.segments,
       speakers: transcript.speakers,
-      provider: "deepgram",
+      provider: transcriptionProvider() ?? "unknown",
     });
-    await usage("transcription_seconds", duration, "deepgram nova-3");
+    await usage("transcription_seconds", duration, transcriptionProvider() ?? "unknown");
 
     // 3. Write ---------------------------------------------------------------
     await setStage("writing");

@@ -95,12 +95,12 @@ npm run dev                    # http://localhost:3000
 
 ### 5. Episode uploads and processing (Milestone 2)
 
-Uploads go straight from the browser to **Cloudflare R2**. A background job on **Trigger.dev** levels the audio with FFmpeg, **Deepgram** transcribes it, and **Claude** drafts the title, show notes, chapters and clip ideas.
+Uploads go straight from the browser to **Cloudflare R2**. A background job on **Trigger.dev** levels the audio with FFmpeg, **ElevenLabs Scribe** transcribes it (Deepgram also works), and **Claude** drafts the title, show notes, chapters and clip ideas.
 
 | Service | What to create | Values you'll need |
 |---|---|---|
 | Cloudflare R2 | A bucket named `ospod-media`, and an R2 API token with **Object Read & Write** on that bucket | Account ID, Access Key ID, Secret Access Key |
-| Deepgram | An API key | API key |
+| ElevenLabs | An API key with Speech to Text access (elevenlabs.io → Developers → API keys) | API key |
 | Anthropic | An API key (with billing set up) | API key |
 | Trigger.dev | A project named `ospod` | Project ref (`proj_…`), Production secret key (`tr_prod_…`) |
 | Supabase | (already have it) | The **secret** key from Project Settings → API Keys |
@@ -112,14 +112,14 @@ Where each value goes:
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (`ospod-media`) | ✓ | ✓ |
 | `TRIGGER_SECRET_KEY` | ✓ | |
 | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | | ✓ |
-| `DEEPGRAM_API_KEY`, `ANTHROPIC_API_KEY` | | ✓ |
+| `ELEVENLABS_API_KEY`, `ANTHROPIC_API_KEY` | | ✓ |
 
 Then, once:
 
 ```
 node --env-file=.env.local scripts/setup-r2-cors.mjs      # lets browsers upload to the bucket
 npx trigger.dev@latest login
-TRIGGER_PROJECT_REF=proj_xxx npx trigger.dev@latest deploy  # deploys the processing job
+npx trigger.dev@latest deploy                               # deploys the processing job
 ```
 
 Redeploy the processing job whenever files in `src/trigger/` or `src/lib/{media,ai}/` change. Estimated unit costs for the admin console are in `src/lib/costs.ts`.

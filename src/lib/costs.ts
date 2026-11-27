@@ -6,8 +6,8 @@ export const UNIT_COSTS = {
   /** Claude Opus 5.5, per million tokens (Anthropic list price). */
   aiInputPerMillion: 4,
   aiOutputPerMillion: 20,
-  /** Deepgram pre-recorded transcription, per audio minute. Check your Deepgram plan. */
-  transcriptionPerMinute: 0.0043,
+  /** Transcription per audio minute (ElevenLabs Scribe is billed per hour of audio; check your plan's rate). */
+  transcriptionPerMinute: 0.0067,
   /** Cloudflare R2 storage, per GB-month (no download fees). */
   storagePerGbMonth: 0.015,
 };

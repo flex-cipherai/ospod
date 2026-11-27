@@ -6,7 +6,7 @@ import { ffmpeg } from "@trigger.dev/build/extensions/core";
  * Deploy with:  npx trigger.dev@latest deploy
  */
 export default defineConfig({
-  project: process.env.TRIGGER_PROJECT_REF ?? "proj_set_TRIGGER_PROJECT_REF",
+  project: process.env.TRIGGER_PROJECT_REF ?? "proj_aiktoallioetgjsjnoql",
   runtime: "node",
   dirs: ["./src/trigger"],
   maxDuration: 3600,
