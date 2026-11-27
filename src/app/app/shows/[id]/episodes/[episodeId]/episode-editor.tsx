@@ -142,7 +142,7 @@ export function EpisodeEditor({
                     if (seconds !== null) setChapters(chapters.map((x, j) => (j === i ? { ...x, start: seconds } : x)));
                   }}
                   placeholder="0:00"
-                  className={clsx(inputClass, "w-28 tabular-nums")}
+                  className={clsx(inputClass, "w-28! shrink-0 tabular-nums")}
                 />
                 <label className="sr-only" htmlFor={`chapter-title-${i}`}>
                   Chapter {i + 1} title
