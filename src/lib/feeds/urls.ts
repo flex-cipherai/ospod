@@ -1,14 +1,18 @@
 import { siteUrl } from "@/lib/env";
 
 /**
- * Where public feeds and media are served. Set FEEDS_BASE_URL=https://feeds.ospod.io once
- * that domain points at the site; until then feeds use the site's own address.
+ * Where public feeds and media are served: feeds.ospod.io on the live site (override with FEEDS_BASE_URL),
+ * the local address in development.
  * Feed addresses are permanent once submitted to Apple and Spotify, so don't submit
  * a feed while it's on the temporary address.
  */
 export function feedsBase(): string {
-  return (process.env.FEEDS_BASE_URL || siteUrl()).replace(/\/+$/, "");
+  const configured = process.env.FEEDS_BASE_URL || (process.env.NODE_ENV === "production" ? PERMANENT_FEEDS_URL : siteUrl());
+  return configured.replace(/\/+$/, "");
 }
+
+/** Live since 2026-11-28 (CNAME at GoDaddy → ospod.netlify.app, alias on the Netlify site). */
+const PERMANENT_FEEDS_URL = "https://feeds.ospod.io";
 
 /** True when feeds are on their permanent address (a dedicated feeds domain). */
 export function feedsOnPermanentDomain(): boolean {
