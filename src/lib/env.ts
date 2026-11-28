@@ -7,14 +7,27 @@ export function supabaseConfig(): { url: string; key: string } | null {
   return { url, key };
 }
 
-/** The site's own address, without a trailing slash. */
+/**
+ * The site's own address, without a trailing slash. The feeds domain (feeds.ospod.io)
+ * only serves feeds, so it's never used as the site's address, even if Netlify lists
+ * it as the primary domain.
+ */
 export function siteUrl(): string {
-  const raw =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.URL || // set by Netlify on production deploys
-    process.env.DEPLOY_PRIME_URL || // set by Netlify on branch and preview deploys
-    "http://localhost:3000";
-  return raw.replace(/\/+$/, "");
+  const candidates = [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.URL, // set by Netlify: the primary domain
+    process.env.DEPLOY_PRIME_URL, // set by Netlify on branch and preview deploys
+  ];
+  const usable = candidates.find((u) => {
+    if (!u) return false;
+    try {
+      return !new URL(u).hostname.startsWith("feeds.");
+    } catch {
+      return false;
+    }
+  });
+  const fallback = process.env.NODE_ENV === "production" ? "https://ospod.netlify.app" : "http://localhost:3000";
+  return (usable ?? fallback).replace(/\/+$/, "");
 }
 
 /** Where podcast feeds will be served (Milestone 3). */
