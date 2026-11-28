@@ -16,7 +16,8 @@ export function siteUrl(): string {
   const candidates = [
     process.env.NEXT_PUBLIC_SITE_URL,
     process.env.URL, // set by Netlify: the primary domain
-    process.env.DEPLOY_PRIME_URL, // set by Netlify on branch and preview deploys
+    // Netlify's branch or preview address: only on preview builds (those are behind a team login).
+    process.env.CONTEXT && process.env.CONTEXT !== "production" ? process.env.DEPLOY_PRIME_URL : undefined,
   ];
   const usable = candidates.find((u) => {
     if (!u) return false;
