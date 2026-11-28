@@ -97,6 +97,7 @@ async function ShowContent({
   const canEdit = roleAtLeast(workspace.role, "editor");
   const total = count ?? 0;
   const importedCount = typeof query.imported === "string" ? Number(query.imported) : null;
+  const firstEpisode = (episodes ?? []).find((e) => e.status === "draft" && (!e.processing_stage || e.processing_stage === "ready"));
 
   return (
     <>
@@ -152,16 +153,37 @@ async function ShowContent({
         <Card className="mb-8 flex flex-wrap items-center gap-4 border-l-[6px] border-l-gold p-6">
           <Clock size={22} className="shrink-0 text-gold-ink" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <p className="font-semibold">
-              {show.imported_from_feed ? "Next: move your feed to Ospod" : "Next: publish your first episode"}
-            </p>
-            <p className="text-[15px] text-slate">
-              {show.imported_from_feed
-                ? `When one-click publishing launches, you'll move your feed to ${FEED_HOST}/${show.feed_slug} in a few clicks. Your listeners, reviews and rankings come with you.`
-                : `One-click publishing is coming next. Your feed will live at ${FEED_HOST}/${show.feed_slug}.`}
-            </p>
+            {show.imported_from_feed ? (
+              <>
+                <p className="font-semibold">Next: move your feed to Ospod</p>
+                <p className="text-[15px] text-slate">
+                  Your listeners still get this show from your old host. Moving it to Ospod, with your listeners, reviews and
+                  rankings, arrives with the next update.
+                </p>
+              </>
+            ) : firstEpisode ? (
+              <>
+                <p className="font-semibold">Next: publish your first episode</p>
+                <p className="text-[15px] text-slate">
+                  Open the episode and click <strong>Publish now</strong> in its Publishing panel. Your feed goes live at{" "}
+                  {FEED_HOST}/{show.feed_slug} at the same moment.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">Next: upload your first episode</p>
+                <p className="text-[15px] text-slate">Ospod prepares it and drafts the title and show notes. Then you publish.</p>
+              </>
+            )}
           </div>
-          <Badge>Coming soon</Badge>
+          {!show.imported_from_feed && canEdit && (
+            <Link
+              href={firstEpisode ? `/app/shows/${show.id}/episodes/${firstEpisode.id}` : `/app/shows/${show.id}/episodes/new`}
+              className={buttonClass({ variant: "gold" })}
+            >
+              {firstEpisode ? "Open episode" : "Upload episode"}
+            </Link>
+          )}
         </Card>
       )}
 

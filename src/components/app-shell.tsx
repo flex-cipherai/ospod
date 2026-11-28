@@ -1,5 +1,5 @@
 import { Suspense, type ReactNode } from "react";
-import { BarChart3, Home, Mic2, Scissors, Send, Settings, ShieldCheck, Users, Building2, LayoutDashboard, ArrowLeft } from "lucide-react";
+import { BarChart3, Home, Mic2, Scissors, Settings, ShieldCheck, Users, Building2, LayoutDashboard, ArrowLeft } from "lucide-react";
 import { OspodLogo } from "@/components/logo";
 import { Skeleton } from "@/components/ui";
 import { getProfile, getWorkspace, getWorkspaces, firstName } from "@/lib/auth";
@@ -11,7 +11,6 @@ type NavItem = { href: string; label: string; icon: ReactNode; soon?: string };
 const appNav: NavItem[] = [
   { href: "/app", label: "Home", icon: <Home size={18} /> },
   { href: "/app/shows", label: "Shows", icon: <Mic2 size={18} /> },
-  { href: "/app/publish", label: "Publish", icon: <Send size={18} />, soon: "Soon" },
   { href: "/app/clips", label: "Clips", icon: <Scissors size={18} />, soon: "Soon" },
   { href: "/app/analytics", label: "Analytics", icon: <BarChart3 size={18} />, soon: "Soon" },
 ];

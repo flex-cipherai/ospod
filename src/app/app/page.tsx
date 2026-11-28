@@ -29,10 +29,18 @@ async function Home() {
   const trialDays = workspace?.plan_status === "trialing" ? daysLeft(workspace.trial_ends_at) : null;
 
   let showCount = 0;
+  let publishedCount = 0;
   if (workspace) {
     const supabase = await createClient();
     const { count } = await supabase.from("shows").select("id", { count: "exact", head: true }).eq("workspace_id", workspace.id);
     showCount = count ?? 0;
+    const { count: live } = await supabase
+      .from("episodes")
+      .select("id, shows!inner(workspace_id)", { count: "exact", head: true })
+      .eq("shows.workspace_id", workspace.id)
+      .in("status", ["published", "scheduled"])
+      .eq("imported", false);
+    publishedCount = live ?? 0;
   }
 
   const steps: Step[] = [
@@ -55,8 +63,14 @@ async function Home() {
     },
     {
       title: "Publish your first episode",
-      body: "Drop in the file. Ospod writes the title, show notes and chapters, and you click Publish.",
+      body: publishedCount
+        ? "Your feed is live. List it in podcast apps from your show's Distribution page."
+        : "Drop in the file. Ospod writes the title, show notes and chapters, and you click Publish.",
       icon: <Send size={18} />,
+      done: publishedCount > 0,
+      available: showCount > 0,
+      href: "/app/shows",
+      cta: "Go to your shows",
     },
   ];
 
